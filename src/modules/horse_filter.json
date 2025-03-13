@@ -1,0 +1,26 @@
+{
+    "parentIds": [
+        "farm_animal_finder"
+    ],
+    "filters": [
+        {
+            "target": {
+                "property": "species",
+                "value": "horse"
+            }
+        },
+        {
+            "dep": {
+                "module": "farm_animal_finder",
+                "result": "success"
+            }
+        }
+    ],
+    "executionTime": {
+        "min": 2000,
+        "max": 4000
+    },
+    "resultWeights": {
+        "success": 1
+    }
+}

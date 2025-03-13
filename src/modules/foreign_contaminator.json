@@ -1,0 +1,32 @@
+{
+    "parentIds": [
+        "cow_milker",
+        "cow_chip_disposer"
+    ],
+    "filters": [
+        {
+            "not": {
+                "dep": {
+                    "module": "cow_milker",
+                    "results": ["wontRun", "error"]
+                }
+            }
+        },
+        {
+            "not": {
+                "dep": {
+                    "module": "cow_chip_disposer",
+                    "results": ["wontRun", "error"]
+                }
+            }
+        }
+    ],
+    "executionTime": {
+        "min": 2000,
+        "max": 4000
+    },
+    "resultWeights": {
+        "success": 12,
+        "fail": 2
+    }
+}

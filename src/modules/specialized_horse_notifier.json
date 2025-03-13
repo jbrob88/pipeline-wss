@@ -1,0 +1,20 @@
+{
+    "parentIds": [
+        "horse_inspector"
+    ],
+    "filters": [
+        {
+            "dep": {
+                "module": "horse_inspector",
+                "result": "fail"
+            }
+        }
+    ],
+    "executionTime": {
+        "min": 2000,
+        "max": 4000
+    },
+    "resultWeights": {
+        "success": 1
+    }
+}

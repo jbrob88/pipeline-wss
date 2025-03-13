@@ -1,0 +1,23 @@
+{
+    "parentIds": [
+        "cow_filter"
+    ],
+    "filters": [
+        {
+            "not": {
+                "dep": {
+                    "module": "cow_filter",
+                    "results": ["wontRun", "error"]
+                }
+            }
+        }
+    ],
+    "executionTime": {
+        "min": 2000,
+        "max": 4000
+    },
+    "resultWeights": {
+        "success": 12,
+        "error": 3
+    }
+}

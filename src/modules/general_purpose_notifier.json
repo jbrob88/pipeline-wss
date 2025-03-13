@@ -1,0 +1,36 @@
+{
+    "parentIds": [
+        "foreign_contaminator",
+        "missing_cow_data_detector",
+        "cow_chip_disposer"
+    ],
+    "filter": {
+        "or": [
+            {
+                "dep": {
+                    "module": "foreign_contaminator",
+                    "result": "fail"
+                }
+            },
+            {
+                "dep": {
+                    "module": "missing_cow_data_detector",
+                    "result": "fail"
+                }
+            },
+            {
+                "dep": {
+                    "module": "cow_chip_disposer",
+                    "result": "fail"
+                }
+            }
+        ]
+    },
+    "executionTime": {
+        "min": 2000,
+        "max": 4000
+    },
+    "resultWeights": {
+        "success": 1
+    }
+}

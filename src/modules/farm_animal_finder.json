@@ -1,0 +1,10 @@
+{
+    "executionTime": {
+        "min": 2000,
+        "max": 4000
+    },
+    "resultWeights": {
+        "success": 40,
+        "error": 1
+    }
+}
