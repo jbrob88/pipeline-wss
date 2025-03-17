@@ -16,8 +16,26 @@
         "min": 4000,
         "max": 8000
     },
-    "resultWeights": {
-        "success": 12,
-        "fail": 2
-    }
+    "resultWeights": [
+        {
+            "result": "success",
+            "reason": "",
+            "weight": 12
+        },
+        {
+            "result": "fail",
+            "reason": "Low prediction confidence.",
+            "weight": 3
+        },
+        {
+            "result": "error",
+            "reason": "RESOURCE_LIMITED",
+            "weight": 2
+        },
+        {
+            "result": "fail",
+            "reason": "Animal weight out of bounds for this ML experiment.",
+            "weight": 1
+        }
+    ]
 }

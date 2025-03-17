@@ -10,7 +10,6 @@ const path = require('path');
 const wss = new WebSocket2.Server({ port: '8081' });
 const pipeline = [];
 let allResults = {};
-const listeners = new Set();
 
 console.log("Server online.");
 
@@ -70,22 +69,38 @@ wss.on('connection', ws => {
     id = id.substring(id.length - 6, id.length);
     const addr = new SocketAddress(ws);
     const fqAddr = addr.address + ':' + addr.port;
-    listeners.add(ws);
-    console.log('New connection from', fqAddr, '(' + id + ') --', listeners.size, 'connection' + (listeners.size == 1 ? '' : 's') + ' active');
+    console.log('New connection from', fqAddr, '(' + id + ') --', wss.clients.size, 'connection' + (wss.clients == 1 ? '' : 's') + ' active');
 
+    ws.isAlive = true;
+    ws.on('pong', function() {
+        this.isAlive = true;
+    });
     ws.on('error', console.error);
     ws.on('message', message => {
         console.log('New message ' + message + ' from', fqAddr, '(' + id + ')');
         handleCommand(ws, message);
     });
     ws.on('close', function() {
-      listeners.delete(ws);
-      console.log(id, 'disconnected --', listeners.size, 'connection' + (listeners.size == 1 ? '' : 's') + ' active');
+        ws.terminate();
+        console.log(id, 'disconnected --', wss.clients.size, 'connection' + (wss.clients.size == 1 ? '' : 's') + ' active');
     });
 
     ws.send(JSON.stringify({ pipeline: pipeline.map( m => ({ id: m.id, parentIds: m.parentIds })) }));
     ws.send(JSON.stringify(Object.values(allResults)));
 });
+
+// Make sure connections are still alive.
+setInterval(function ping() {
+    wss.clients.forEach(ws => {
+        if (ws.isAlive === false) {
+            ws.terminate();
+            return;
+        }
+  
+        ws.isAlive = false;
+        ws.ping();
+    });
+  }, 30000);
 
 function handleCommand(ws, cmd) {
     switch(String(cmd)) {
@@ -125,7 +140,7 @@ function injectTargets(n) {
 function resetTargets() {
     clearTimeouts();
     allResults = {};
-    listeners.values().forEach(ws => {
+    wss.clients.forEach(ws => {
         ws.send(JSON.stringify({reset: true}));
     });
 }
@@ -142,66 +157,66 @@ One can be specified in the 'filter' field, or an array of them can be specified
 */
 function filter(f, t, r) {
     if (f == undefined) {
-        return true;
+        return {matched: true, reason: ''};
     }
     if (f.hasOwnProperty('and')) {
+        let allReasons = '';
         for (let i in f.and) {
             const f2 = f.and[i];
-            if (!filter(f2, t, r)) {
-                // TODO: return this as a reason
-                // console.log("!" + JSON.stringify(f2));
-                return false;
+            const {matched, reason} = filter(f2, t, r);
+            if (!matched) {
+                return {matched: false, reason: reason};
             }
+            if (allReasons != '') {
+                allReasons += ' && '
+            }
+            allReasons += reason;
         }
-        return true;
+        return {matched: true, reason: allReasons};
     }
     if (f.hasOwnProperty('or')) {
+        let allReasons = ''
         for (let i in f.or) {
             const f2 = f.or[i];
-            if (filter(f2, t, r)) {
-                return true;
+            const {matched, reason} = filter(f2, t, r);
+            if (matched) {
+                return {matched: true, reason: reason};
             }
+            if (allReasons != '') {
+                allReasons += ' && '
+            }
+            allReasons += reason;
         }
-        // TODO: return this as a reason
-        // console.log("none of", json.stringify(f.or), "is true");
-        return false;
+        return {matched: false, reason: allReasons};
     }
     if (f.hasOwnProperty('not')) {
-        const res = !(filter(f.not, t, r));
-        if (!res) {
-            // TODO: append this to the reason returned by filter
-            // console.log("blocked by !");
+        const {matched, reason} = filter(f.not, t, r);
+        if (matched) {
+            return {matched: false, reason: reason};
         }
-        return res;
+        return {matched: true, reason: reason};
     }
     if (f.hasOwnProperty('target')) {
-        const res = (t[f.target.property] == f.target.value);
-        if (!res) {
-            // TODO: return this as a reason
-            // console.log("target." + f.target.property + " (" + t[f.target.property] + ") != " + f.target.value);
+        if (t[f.target.property] != f.target.value) {
+            return {matched: false, reason: 'target.' + f.target.property + ' (' + t[f.target.property] + ') != ' + f.target.value};
         }
-        return res;
+        return {matched: true, reason: 'target.' + f.target.property + ' (' + t[f.target.property] + ') == ' + f.target.value};
     }
     if (f.hasOwnProperty('dep')) {
         if (f.dep.hasOwnProperty('results')) {
             for (let i in f.dep.results) {
                 const r2 = f.dep.results[i];
                 if (r[f.dep.module] == r2) {
-                    // TODO: return this as a reason
-                    // console.log("dep." + f.dep.module + " (" + r[f.dep.module] + ") == " + r2);
-                    return true;
+                    return {matched: true, reason: 'dep.' + f.dep.module + ' (' + r[f.dep.module] + ') in ' + JSON.stringify(f.dep.results)};
                 }
             };
-            // TODO: return this as a reason
-            // console.log("dep." + f.dep.module + " (" + r[f.dep.module] + ") not in " + JSON.stringify(f.dep.results));
-            return false;
+            return {matched: false, reason: '!(dep.' + f.dep.module + ' (' + r[f.dep.module] + ') in ' + JSON.stringify(f.dep.results) + ')'};
         }
         const res = (r[f.dep.module] == f.dep.result);
         if (!res) {
-            // TODO: return this as a reason
-            // console.log("dep." + f.dep.module + " (" + r[f.dep.module] + ") != " + f.dep.result);
+            return {matched: false, reason: 'dep.' + f.dep.module + ' (' + r[f.dep.module] + ') != ' + f.dep.result};
         }
-        return res;
+        return {matched: true, reason: 'dep.' + f.dep.module + ' (' + r[f.dep.module] + ') == ' + f.dep.result};
     }
 }
 
@@ -230,46 +245,77 @@ function injectTarget(t) {
         }
     }
 
-    function markWontRun(m) {
+    function markWontRun(m, rsn) {
         results[m.id] = 'wontRun';
         let result = {
             module: m.id,
             wontRun: {
                 count: 1,
-            }
+                details: [
+                    {
+                        target: t,
+                        reason: rsn,
+                    },
+                ],
+            },
         };
         recordResults([result]);
     }
 
     function runModule(m) {
         // Mark as wontRun if filter doesn't match.
-        let filterMatched = true;
+        let matched = true;
+        let reason = '';
         if (m.hasOwnProperty('filters')) {
-            filterMatched = filter({and: m.filters}, t, results);
+            const f = filter({and: m.filters}, t, results);
+            matched = f.matched;
+            reason = f.reason;
         } else if (m.hasOwnProperty('filter')) {
-            filterMatched = filter(m.filter, t, results);
+            const f = filter(m.filter, t, results);
+            matched = f.matched;
+            reason = f.reason;
         }
-        if (!filterMatched) {
-            markWontRun(m);
+        if (!matched) {
+            markWontRun(m, reason);
             runReadyModules();
             return;
         }
         // Mark as pending.
         results[m.id] = 'pending';
-        let result = {
+        let resultObj = {
             module: m.id,
             pending: {
                 count: 1,
-            }
+                details: [
+                    {
+                        target: t,
+                    },
+                ],
+            },
         };
-        recordResults([result]);
+        recordResults([resultObj]);
         // Wait for a bit, then mark final result.
         queueFunc(randTime(m), function() {
-            const r = randResult(m);
-            results[m.id] = r;
-            result.pending = { count: -1 };
-            result[r] = { count: 1 };
-            recordResults([result]);
+            const {result, reason} = randResult(m);
+            results[m.id] = result;
+            resultObj.pending = {
+                count: -1,
+                removeDetails: [
+                    {
+                        target: t,
+                    },
+                ],
+            };
+            resultObj[result] = {
+                count: 1,
+                details: [
+                    {
+                        target: t,
+                        reason: reason,
+                    },
+                ],  
+            };
+            recordResults([resultObj]);
             // Now that new results are finished, check for ready modules again.
             runReadyModules();
         });
@@ -301,19 +347,17 @@ function randResult(module) {
     const weights = module.resultWeights;
     const spinner = {};
     let total = 0;
-    for (const k in weights) {
-        if (weights.hasOwnProperty(k)) {
-            total += weights[k];
-        }
-    }
+    for (const i in weights) {
+        const w = weights[i];
+        total += w.weight;
+    };
     const r = Math.random() * total;
     total = 0;
-    for (const k in weights) {
-        if (weights.hasOwnProperty(k)) {
-            total += weights[k];
-            if (r <= total) {
-                return k;
-            }
+    for (const i in weights) {
+        const w = weights[i];
+        total += w.weight;
+        if (r <= total) {
+            return {result: w.result, reason: w.reason};
         }
     }
 }
@@ -333,7 +377,7 @@ function recordResults(results) {
     results.forEach(r => {
         storeResultLocally(r);
     });
-    listeners.values().forEach(ws => {
+    wss.clients.forEach(ws => {
         ws.send(JSON.stringify(results));
     });
 }
@@ -344,9 +388,16 @@ function storePropertyLocally(moduleName, result, property) {
     }
     const module = allResults[moduleName];
     if (! module.hasOwnProperty(property)) {
-        module[property] = { count: 0 };
+        module[property] = { count: 0, details: [] };
     }
-    module[property].count += result[property].count;
+    const p = module[property];
+    p.count += result[property].count;
+    if (result[property].hasOwnProperty('removeDetails')) {
+        p.details = p.details.splice(p.details.indexOf(result[property].removeDetails), 1);
+    }
+    if (result[property].hasOwnProperty('details')) {
+        p.details.push(...(result[property].details));
+    }
 }
 
 function storeResultLocally(result) {

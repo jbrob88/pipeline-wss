@@ -30,7 +30,11 @@
         "min": 2000,
         "max": 4000
     },
-    "resultWeights": {
-        "success": 1
-    }
+    "resultWeights": [
+        {
+            "result": "success",
+            "reason": "",
+            "weight": 1
+        }
+    ]
 }

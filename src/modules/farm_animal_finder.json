@@ -3,8 +3,21 @@
         "min": 2000,
         "max": 4000
     },
-    "resultWeights": {
-        "success": 40,
-        "error": 1
-    }
+    "resultWeights": [
+        {
+            "result": "success",
+            "reason": "",
+            "weight": 100
+        },
+        {
+            "result": "fail",
+            "reason": "Animal was corrupt and attempted to take over barnyard.",
+            "weight": 1
+        },
+        {
+            "result": "fail",
+            "reason": "Animal appears to have been adopted, but old records exist.",
+            "weight": 1
+        }
+    ]
 }

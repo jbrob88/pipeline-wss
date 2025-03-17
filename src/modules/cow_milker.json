@@ -16,8 +16,21 @@
         "min": 2000,
         "max": 4000
     },
-    "resultWeights": {
-        "success": 12,
-        "fail": 2
-    }
+    "resultWeights": [
+        {
+            "result": "success",
+            "reason": "",
+            "weight": 17
+        },
+        {
+            "result": "fail",
+            "reason": "Cat drank from pail.",
+            "weight": 1
+        },
+        {
+            "result": "fail",
+            "reason": "Milk curdled in pail.",
+            "weight": 2
+        }
+    ]
 }

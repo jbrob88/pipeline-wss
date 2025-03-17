@@ -14,7 +14,21 @@
         "min": 2000,
         "max": 4000
     },
-    "resultWeights": {
-        "success": 1
-    }
+    "resultWeights": [
+        {
+            "result": "success",
+            "reason": "",
+            "weight": 12
+        },
+        {
+            "result": "error",
+            "reason": "DEST_INBOX_FULL",
+            "weight": 3
+        },
+        {
+            "result": "error",
+            "reason": "UNKOWN",
+            "weight": 2
+        }
+    ]
 }
